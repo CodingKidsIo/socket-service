@@ -8,10 +8,7 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import com.example.socket.service.data.manager.SessionRequestsManager;
 import com.example.socket.service.data.manager.SessionsDataManager;
-import com.example.socket.service.request.BaseRequest;
 import com.example.socket.service.strategy.registry.SubscriptionStrategy;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.RequiredArgsConstructor;
 
@@ -19,7 +16,6 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class WebSocketController extends TextWebSocketHandler {
 
-	private static final ObjectMapper objectMapper = new ObjectMapper();
 	private final SubscriptionStrategy subscriptionStrategy;
  
     @Override
@@ -29,23 +25,24 @@ public class WebSocketController extends TextWebSocketHandler {
 
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
-		if (SessionsDataManager.getSession(session.getId()) == null) {
-			throw new IllegalArgumentException("Session not found: " + session.getId());
+		if (SessionsDataManager.getSession(session.getId()) != null) {
+			SessionRequestsManager.addSessionRequest(session.getId(), message.getPayload());
+			subscriptionStrategy.subscribe(session.getId(), message.getPayload());
 		}
-		BaseRequest<Object> subscriptionRequest = objectMapper.readValue(message.getPayload(), new TypeReference<BaseRequest<Object>>() {});
-		SessionRequestsManager.addSessionRequest(session.getId(), subscriptionRequest);
-		subscriptionStrategy.subscribe(subscriptionRequest.getType(), session.getId(), subscriptionRequest.getData());
 	}
 
 
 	@Override
 	public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
-		if (SessionsDataManager.getSession(session.getId()) == null) {
-			throw new IllegalArgumentException("Session not found: " + session.getId());
+		if (SessionsDataManager.getSession(session.getId()) != null) {
+			SessionsDataManager.removeSession(session.getId());
+			unsubscribeSessionRequests(session.getId());
+			SessionRequestsManager.removeSessionRequests(session.getId());
 		}
-		SessionsDataManager.removeSession(session.getId());
-		SessionRequestsManager.getSessionRequests(session.getId()).forEach(request -> subscriptionStrategy.unsubscribe(request.getType(), session.getId(), request.getData()));
-		SessionRequestsManager.removeSessionRequests(session.getId());
+	}
+
+	private void unsubscribeSessionRequests(String sessionId) {
+		SessionRequestsManager.getSessionRequests(sessionId).forEach(request -> subscriptionStrategy.unsubscribe(sessionId, request));
 	}
     
 }

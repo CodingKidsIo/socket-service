@@ -5,16 +5,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.example.socket.service.request.BaseRequest;
-
 public class SessionRequestsManager {
-    private final static Map<String, List<BaseRequest<Object>>> sessionRequests = new HashMap<>();
+    private final static Map<String, List<String>> sessionRequests = new HashMap<>();
 
-    public static List<BaseRequest<Object>> getSessionRequests(String sessionId) {
+    public static List<String> getSessionRequests(String sessionId) {
         return sessionRequests.getOrDefault(sessionId, new ArrayList<>());
     }
 
-    public static void addSessionRequest(String sessionId, BaseRequest<Object> request) {
+    public static void addSessionRequest(String sessionId, String request) {
         if (!sessionRequests.containsKey(sessionId)) {
             sessionRequests.put(sessionId, new ArrayList<>());
         }

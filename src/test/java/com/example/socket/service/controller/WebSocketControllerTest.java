@@ -42,15 +42,7 @@ public class WebSocketControllerTest {
     }
 
     @Test
-    public void testHandleTextMessageBeforeConnection() throws Exception {
-        when(webSocketSession.getId()).thenReturn(UUID.randomUUID().toString());
-        String message = "{\"type\": \"pricefeed\", \"data\": {\"stocks\": [\"RELIANCE\"]}}";
-        Exception exception = assertThrows(IllegalArgumentException.class, () -> webSocketController.handleTextMessage(webSocketSession, new TextMessage(message)));
-        assertEquals("Session not found: " + webSocketSession.getId(), exception.getMessage());
-    }
-
-    @Test
-    public void testHandleTextMessageAfterConnection() throws Exception {
+    public void testHandleTextMessage() throws Exception {
         when(webSocketSession.getId()).thenReturn(UUID.randomUUID().toString());
         webSocketController.afterConnectionEstablished(webSocketSession);
         String message = "{\"type\": \"pricefeed\", \"data\": {\"stocks\": [\"RELIANCE\"]}}";
@@ -61,16 +53,17 @@ public class WebSocketControllerTest {
         assertTrue(subscriptions.contains(webSocketSession.getId()));
     }
 
-
     @Test
-    public void testAfterConnectionClosedBeforeConnection() throws Exception {
+    public void testHandleTextMessageForInvalidType() throws Exception {
         when(webSocketSession.getId()).thenReturn(UUID.randomUUID().toString());
-        Exception exception = assertThrows(IllegalArgumentException.class, () -> webSocketController.afterConnectionClosed(webSocketSession, CloseStatus.NORMAL));
-        assertEquals("Session not found: " + webSocketSession.getId(), exception.getMessage());
+        webSocketController.afterConnectionEstablished(webSocketSession);
+        String message = "{\"type\": \"invalid_pricefeed\", \"data\": {\"stocks\": [\"RELIANCE\"]}}";
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> webSocketController.handleTextMessage(webSocketSession, new TextMessage(message)));
+        assertEquals("Failed to parse data", exception.getMessage());
     }
 
     @Test
-    public void testAfterConnectionClosedAfterConnection() throws Exception {
+    public void testAfterConnectionClosed() throws Exception {
         when(webSocketSession.getId()).thenReturn(UUID.randomUUID().toString());
         webSocketController.afterConnectionEstablished(webSocketSession);
         String message = "{\"type\": \"pricefeed\", \"data\": {\"stocks\": [\"RELIANCE\"]}}";
